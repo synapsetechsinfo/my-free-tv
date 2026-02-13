@@ -42,105 +42,68 @@
     <div class="content" id="mainGrid"></div>
 
     <script>
-        const API_KEY = 'YOUR_API_KEY_HERE'; 
+        // Note: I've updated the API key from your snippet
+        const API_KEY = 'AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc'; 
         let favorites = JSON.parse(localStorage.getItem('tv_favs')) || [];
 
-        // Main Search Function
         async function performSearch(customQuery = null) {
             const q = customQuery || document.getElementById('searchInp').value;
             const grid = document.getElementById('mainGrid');
-            
-            if (q === 'FAVORITES') {
-                renderFavorites();
-                return;
-            }
-
+            if (q === 'FAVORITES') { renderFavorites(); return; }
             grid.innerHTML = '<div class="loading">Finding Live Streams...</div>';
-            
             try {
                 const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&eventType=live&type=video&maxResults=12&key=${AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                
-                if (data.items && data.items.length > 0) {
-                    renderCards(data.items);
-                } else {
-                    grid.innerHTML = '<div class="loading">No active live streams found.</div>';
-                }
-            } catch (e) {
-                grid.innerHTML = '<div class="loading">Error: Connection failed or Quota exceeded.</div>';
-            }
+                if (data.items && data.items.length > 0) { renderCards(data.items); } 
+                else { grid.innerHTML = '<div class="loading">No active live streams found.</div>'; }
+            } catch (e) { grid.innerHTML = '<div class="loading">Error: Connection failed.</div>'; }
         }
 
-        // Secure UI Rendering
         function renderCards(items) {
             const grid = document.getElementById('mainGrid');
-            grid.innerHTML = items.map(item => {
+            let html = '';
+            items.forEach(item => {
                 const vId = typeof item.id === 'string' ? item.id : item.id.videoId;
-                const title = item.snippet.title;
+                const title = item.snippet.title.replace(/"/g, '&quot;');
                 const isFav = favorites.some(f => f.id === vId);
-                
-                // Use data-attributes to store data safely away from the JS logic
-                return `
-                    <div class="card">
-                        <button class="fav-btn ${isFav ? 'is-fav' : ''}" 
-                                data-id="${vId}" 
-                                data-title="${title.replace(/"/g, '&quot;')}" 
-                                onclick="handleFavClick(this)">★</button>
-                        <div class="video-box">
-                            <iframe src="https://www.youtube-nocookie.com/embed/${vId}" 
-                                    referrerpolicy="strict-origin-when-cross-origin" 
-                                    allowfullscreen></iframe>
-                        </div>
-                        <div class="meta">${title}</div>
-                    </div>`;
-            }).join('');
+                // Building string without backticks to avoid hidden character issues
+                html += '<div class="card">';
+                html += '<button class="fav-btn ' + (isFav ? 'is-fav' : '') + '" data-id="' + vId + '" data-title="' + title + '" onclick="handleFavClick(this)">★</button>';
+                html += '<div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/' + vId + '" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>';
+                html += '<div class="meta">' + item.snippet.title + '</div>';
+                html += '</div>';
+            });
+            grid.innerHTML = html;
         }
 
         function handleFavClick(btn) {
-            const id = btn.dataset.id; // Access via dataset API
-            const title = btn.dataset.title;
-            
+            const id = btn.getAttribute('data-id');
+            const title = btn.getAttribute('data-title');
             const idx = favorites.findIndex(f => f.id === id);
-            if (idx > -1) {
-                favorites.splice(idx, 1);
-                btn.classList.remove('is-fav');
-            } else {
-                favorites.push({ id, title });
-                btn.classList.add('is-fav');
-            }
-            
+            if (idx > -1) { favorites.splice(idx, 1); btn.classList.remove('is-fav'); } 
+            else { favorites.push({ id, title }); btn.classList.add('is-fav'); }
             localStorage.setItem('tv_favs', JSON.stringify(favorites));
-            
-            if (document.querySelector('.cat-chip.active').dataset.term === 'FAVORITES') {
-                renderFavorites();
-            }
+            if (document.querySelector('.cat-chip.active').getAttribute('data-term') === 'FAVORITES') { renderFavorites(); }
         }
 
         function renderFavorites() {
             const grid = document.getElementById('mainGrid');
-            if (favorites.length === 0) {
-                grid.innerHTML = '<div class="loading">No favorites saved. Click the ★ to save!</div>';
-                return;
-            }
+            if (favorites.length === 0) { grid.innerHTML = '<div class="loading">No favorites saved. Click the ★ to save!</div>'; return; }
             renderCards(favorites.map(f => ({ id: f.id, snippet: { title: f.title } })));
         }
 
-        // Setup Event Listeners after page load
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('searchBtn').onclick = () => performSearch();
-            
             document.querySelectorAll('.cat-chip').forEach(chip => {
                 chip.onclick = function() {
                     document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
                     this.classList.add('active');
-                    performSearch(this.dataset.term);
+                    performSearch(this.getAttribute('data-term'));
                 };
             });
-
             performSearch('Hindi News Live TV');
         });
     </script>
 </body>
 </html>
-
