@@ -8,41 +8,38 @@
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --accent: #ff0000; --text: #e0e0e0; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
-        .header { position: sticky; top: 0; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(10px); padding: 15px; z-index: 1000; border-bottom: 1px solid #333; }
+        .header { position: sticky; top: 0; background: rgba(18,18,18,0.95); backdrop-filter: blur(10px); padding: 15px; z-index: 1000; border-bottom: 1px solid #333; }
         .search-container { display: flex; gap: 8px; margin-bottom: 12px; }
         input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #444; background: #252525; color: white; outline: none; font-size: 16px; }
         .categories { display: flex; gap: 10px; overflow-x: auto; padding: 5px 0; scrollbar-width: none; }
-        .cat-chip { background: #333; padding: 8px 18px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; border: 1px solid transparent; }
-        .cat-chip.active { background: var(--accent); border-color: var(--accent); }
+        .cat-chip { background: #333; padding: 8px 18px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; }
+        .cat-chip.active { background: var(--accent); }
         .content { padding: 15px; display: grid; grid-template-columns: 1fr; gap: 20px; }
-        .card { background: var(--card); border-radius: 15px; overflow: hidden; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .card { background: var(--card); border-radius: 15px; overflow: hidden; position: relative; }
         .video-box { position: relative; padding-bottom: 56.25%; height: 0; background: #000; }
         .video-box iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-        .fav-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); border: none; color: white; padding: 8px; border-radius: 50%; z-index: 10; font-size: 22px; cursor: pointer; line-height: 1; }
+        .fav-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); border: none; color: white; padding: 8px; border-radius: 50%; z-index: 10; font-size: 22px; cursor: pointer; }
         .is-fav { color: #ffd700 !important; }
-        .meta { padding: 12px; font-weight: 600; font-size: 14px; line-height: 1.4; }
+        .meta { padding: 12px; font-weight: 600; font-size: 14px; }
         .loading { text-align: center; padding: 40px; color: #888; }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="search-container">
-            <input type="text" id="searchInp" placeholder="Search News, Music, Sports...">
-            <button id="searchBtn" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer; padding: 0 10px;">SEARCH</button>
+            <input type="text" id="searchInp" placeholder="Search TV...">
+            <button id="searchBtn" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer;">SEARCH</button>
         </div>
-        <div class="categories" id="catBar">
+        <div class="categories">
             <div class="cat-chip" data-term="FAVORITES">⭐ Favorites</div>
             <div class="cat-chip active" data-term="Hindi News Live TV">Hindi News</div>
-            <div class="cat-chip" data-term="English News Live">Global</div>
+            <div class="cat-chip" data-term="English News Live">Global TV</div>
             <div class="cat-chip" data-term="Live Bhakti India">Bhakti</div>
-            <div class="cat-chip" data-term="Punjabi News Live">Punjabi</div>
         </div>
     </div>
-
     <div class="content" id="mainGrid"></div>
 
     <script>
-        // Note: I've updated the API key from your snippet
         const API_KEY = 'AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc'; 
         let favorites = JSON.parse(localStorage.getItem('tv_favs')) || [];
 
@@ -50,46 +47,68 @@
             const q = customQuery || document.getElementById('searchInp').value;
             const grid = document.getElementById('mainGrid');
             if (q === 'FAVORITES') { renderFavorites(); return; }
-            grid.innerHTML = '<div class="loading">Finding Live Streams...</div>';
+            grid.innerHTML = '<div class="loading">Loading Streams...</div>';
             try {
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&eventType=live&type=video&maxResults=12&key=${AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc}`;
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&eventType=live&type=video&maxResults=10&key=${AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc}`;
                 const res = await fetch(url);
                 const data = await res.json();
-                if (data.items && data.items.length > 0) { renderCards(data.items); } 
-                else { grid.innerHTML = '<div class="loading">No active live streams found.</div>'; }
-            } catch (e) { grid.innerHTML = '<div class="loading">Error: Connection failed.</div>'; }
+                if (data.items) renderCards(data.items);
+            } catch (e) { grid.innerHTML = 'Error loading channels.'; }
         }
 
+        // BUILDING UI USING DOM ELEMENTS (NO STRINGS = NO SYNTAX ERRORS)
         function renderCards(items) {
             const grid = document.getElementById('mainGrid');
-            let html = '';
+            grid.innerHTML = ''; 
+
             items.forEach(item => {
                 const vId = typeof item.id === 'string' ? item.id : item.id.videoId;
-                const title = item.snippet.title.replace(/"/g, '&quot;');
+                const title = item.snippet.title;
                 const isFav = favorites.some(f => f.id === vId);
-                // Building string without backticks to avoid hidden character issues
-                html += '<div class="card">';
-                html += '<button class="fav-btn ' + (isFav ? 'is-fav' : '') + '" data-id="' + vId + '" data-title="' + title + '" onclick="handleFavClick(this)">★</button>';
-                html += '<div class="video-box"><iframe src="https://www.youtube-nocookie.com/embed/' + vId + '" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>';
-                html += '<div class="meta">' + item.snippet.title + '</div>';
-                html += '</div>';
-            });
-            grid.innerHTML = html;
-        }
 
-        function handleFavClick(btn) {
-            const id = btn.getAttribute('data-id');
-            const title = btn.getAttribute('data-title');
-            const idx = favorites.findIndex(f => f.id === id);
-            if (idx > -1) { favorites.splice(idx, 1); btn.classList.remove('is-fav'); } 
-            else { favorites.push({ id, title }); btn.classList.add('is-fav'); }
-            localStorage.setItem('tv_favs', JSON.stringify(favorites));
-            if (document.querySelector('.cat-chip.active').getAttribute('data-term') === 'FAVORITES') { renderFavorites(); }
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                const btn = document.createElement('button');
+                btn.className = 'fav-btn' + (isFav ? ' is-fav' : '');
+                btn.innerHTML = '★';
+                btn.onclick = () => {
+                    const idx = favorites.findIndex(f => f.id === vId);
+                    if (idx > -1) {
+                        favorites.splice(idx, 1);
+                        btn.classList.remove('is-fav');
+                    } else {
+                        favorites.push({ id: vId, title: title });
+                        btn.classList.add('is-fav');
+                    }
+                    localStorage.setItem('tv_favs', JSON.stringify(favorites));
+                };
+
+                const videoBox = document.createElement('div');
+                videoBox.className = 'video-box';
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube-nocookie.com/embed/${vId}`;
+                iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+                iframe.setAttribute('allowfullscreen', 'true');
+                
+                const meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.innerText = title;
+
+                videoBox.appendChild(iframe);
+                card.appendChild(btn);
+                card.appendChild(videoBox);
+                card.appendChild(meta);
+                grid.appendChild(card);
+            });
         }
 
         function renderFavorites() {
             const grid = document.getElementById('mainGrid');
-            if (favorites.length === 0) { grid.innerHTML = '<div class="loading">No favorites saved. Click the ★ to save!</div>'; return; }
+            if (favorites.length === 0) {
+                grid.innerHTML = '<div class="loading">No favorites yet!</div>';
+                return;
+            }
             renderCards(favorites.map(f => ({ id: f.id, snippet: { title: f.title } })));
         }
 
