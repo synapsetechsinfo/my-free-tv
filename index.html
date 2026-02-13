@@ -58,7 +58,7 @@
             grid.innerHTML = '<div class="loading">Finding Live Streams...</div>';
             
             try {
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&eventType=live&type=video&maxResults=12&key=${API_KEY}`;
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&eventType=live&type=video&maxResults=12&key=${AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc}`;
                 const res = await fetch(url);
                 const data = await res.json();
                 
@@ -143,3 +143,4 @@
     </script>
 </body>
 </html>
+
