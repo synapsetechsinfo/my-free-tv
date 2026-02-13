@@ -8,52 +8,44 @@
     <style>
         :root { --bg: #121212; --card: #1e1e1e; --accent: #ff0000; --text: #e0e0e0; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
-        
         .header { position: sticky; top: 0; background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(10px); padding: 15px; z-index: 1000; border-bottom: 1px solid #333; }
         .search-container { display: flex; gap: 8px; margin-bottom: 12px; }
         input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #444; background: #252525; color: white; outline: none; font-size: 16px; }
-        
         .categories { display: flex; gap: 10px; overflow-x: auto; padding: 5px 0; scrollbar-width: none; }
         .cat-chip { background: #333; padding: 8px 18px; border-radius: 20px; font-size: 14px; white-space: nowrap; cursor: pointer; border: 1px solid transparent; }
         .cat-chip.active { background: var(--accent); border-color: var(--accent); }
-
         .content { padding: 15px; display: grid; grid-template-columns: 1fr; gap: 20px; }
         .card { background: var(--card); border-radius: 15px; overflow: hidden; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        
         .video-box { position: relative; padding-bottom: 56.25%; height: 0; background: #000; }
         .video-box iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-        
         .fav-btn { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); border: none; color: white; padding: 8px; border-radius: 50%; z-index: 10; font-size: 22px; cursor: pointer; line-height: 1; }
         .is-fav { color: #ffd700 !important; }
-        
         .meta { padding: 12px; font-weight: 600; font-size: 14px; line-height: 1.4; }
         .loading { text-align: center; padding: 40px; color: #888; }
     </style>
 </head>
 <body>
-
     <div class="header">
         <div class="search-container">
             <input type="text" id="searchInp" placeholder="Search News, Music, Sports...">
-            <button onclick="performSearch()" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer; padding: 0 10px;">SEARCH</button>
+            <button id="searchBtn" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer; padding: 0 10px;">SEARCH</button>
         </div>
         <div class="categories" id="catBar">
-            <div class="cat-chip" onclick="handleCat(this, 'FAVORITES')">⭐ Favorites</div>
-            <div class="cat-chip active" onclick="handleCat(this, 'Hindi News Live TV')">Hindi News</div>
-            <div class="cat-chip" onclick="handleCat(this, 'English News Live')">Global</div>
-            <div class="cat-chip" onclick="handleCat(this, 'Live Bhakti India')">Bhakti</div>
-            <div class="cat-chip" onclick="handleCat(this, 'Punjabi News Live')">Punjabi</div>
+            <div class="cat-chip" data-term="FAVORITES">⭐ Favorites</div>
+            <div class="cat-chip active" data-term="Hindi News Live TV">Hindi News</div>
+            <div class="cat-chip" data-term="English News Live">Global</div>
+            <div class="cat-chip" data-term="Live Bhakti India">Bhakti</div>
+            <div class="cat-chip" data-term="Punjabi News Live">Punjabi</div>
         </div>
     </div>
 
     <div class="content" id="mainGrid"></div>
 
     <script>
-        // 1. Setup
-        const API_KEY = 'AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc'; 
+        const API_KEY = 'YOUR_API_KEY_HERE'; 
         let favorites = JSON.parse(localStorage.getItem('tv_favs')) || [];
 
-        // 2. Main Search Logic
+        // Main Search Function
         async function performSearch(customQuery = null) {
             const q = customQuery || document.getElementById('searchInp').value;
             const grid = document.getElementById('mainGrid');
@@ -66,21 +58,21 @@
             grid.innerHTML = '<div class="loading">Finding Live Streams...</div>';
             
             try {
-                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&eventType=live&type=video&maxResults=12&key=${AIzaSyCUJfdz9NiuUF-3fvwTR2EqDwNlgCA0dhc}`;
+                const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(q)}&eventType=live&type=video&maxResults=12&key=${API_KEY}`;
                 const res = await fetch(url);
                 const data = await res.json();
                 
                 if (data.items && data.items.length > 0) {
                     renderCards(data.items);
                 } else {
-                    grid.innerHTML = '<div class="loading">No active live streams found for this search.</div>';
+                    grid.innerHTML = '<div class="loading">No active live streams found.</div>';
                 }
             } catch (e) {
                 grid.innerHTML = '<div class="loading">Error: Connection failed or Quota exceeded.</div>';
             }
         }
 
-        // 3. UI Rendering with Data Attributes to avoid SyntaxErrors
+        // Secure UI Rendering
         function renderCards(items) {
             const grid = document.getElementById('mainGrid');
             grid.innerHTML = items.map(item => {
@@ -88,6 +80,7 @@
                 const title = item.snippet.title;
                 const isFav = favorites.some(f => f.id === vId);
                 
+                // Use data-attributes to store data safely away from the JS logic
                 return `
                     <div class="card">
                         <button class="fav-btn ${isFav ? 'is-fav' : ''}" 
@@ -104,10 +97,9 @@
             }).join('');
         }
 
-        // 4. Favorites Management
         function handleFavClick(btn) {
-            const id = btn.getAttribute('data-id');
-            const title = btn.getAttribute('data-title');
+            const id = btn.dataset.id; // Access via dataset API
+            const title = btn.dataset.title;
             
             const idx = favorites.findIndex(f => f.id === id);
             if (idx > -1) {
@@ -120,8 +112,7 @@
             
             localStorage.setItem('tv_favs', JSON.stringify(favorites));
             
-            // Auto-refresh if currently on Favorites tab
-            if (document.querySelector('.cat-chip.active').innerText.includes('Favorites')) {
+            if (document.querySelector('.cat-chip.active').dataset.term === 'FAVORITES') {
                 renderFavorites();
             }
         }
@@ -129,26 +120,26 @@
         function renderFavorites() {
             const grid = document.getElementById('mainGrid');
             if (favorites.length === 0) {
-                grid.innerHTML = '<div class="loading">No favorites saved yet. Click the ★ to save a channel!</div>';
+                grid.innerHTML = '<div class="loading">No favorites saved. Click the ★ to save!</div>';
                 return;
             }
-            // Map favorites back to the structure renderCards expects
-            const favItems = favorites.map(f => ({
-                id: f.id, 
-                snippet: { title: f.title }
-            }));
-            renderCards(favItems);
+            renderCards(favorites.map(f => ({ id: f.id, snippet: { title: f.title } })));
         }
 
-        // 5. Category Navigation
-        function handleCat(el, term) {
-            document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-            performSearch(term);
-        }
+        // Setup Event Listeners after page load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('searchBtn').onclick = () => performSearch();
+            
+            document.querySelectorAll('.cat-chip').forEach(chip => {
+                chip.onclick = function() {
+                    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    performSearch(this.dataset.term);
+                };
+            });
 
-        // Initial Load on Page Startup
-        window.onload = () => performSearch('Hindi News Live TV');
+            performSearch('Hindi News Live TV');
+        });
     </script>
 </body>
 </html>
